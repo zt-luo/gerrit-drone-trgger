@@ -1,0 +1,2 @@
+requests==2.28.1
+Webhook-Listener==1.2.0
