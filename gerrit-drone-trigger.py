@@ -16,7 +16,7 @@ env_val = {
     "comment_verify_key": "verify",
     "drone_ci_url": "https://drone.tower.ztluo.dev/",
     "drone_ci_name": "drone",
-    "drone_ci_token": "2c74e863e77b04c556dff22022a867b5",
+    "drone_ci_token": "",
 }
 
 
