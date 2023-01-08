@@ -1,7 +1,7 @@
 FROM ubuntu:22.04
 
 LABEL maintainer="ztluo <me@ztluo.dev>"
-LABEL Description="gerrit-drone-trgger"
+LABEL Description="gerrit-drone-trigger"
 WORKDIR /work
 
 ADD . /work
@@ -13,4 +13,4 @@ RUN apt-get update && \
 
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-CMD [ "python3", "gerrit-drone-trgger.py" ]
+CMD [ "python3", "gerrit-drone-trigger.py" ]
