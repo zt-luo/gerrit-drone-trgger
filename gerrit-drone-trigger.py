@@ -25,6 +25,7 @@ pending_patch_builds = dict()
 
 def gerrit_get_latest_comment(change_id):
     with subprocess.Popen(["ssh",
+                           "-o", '""' + 'StrictHostKeyChecking no' + '""',
                            "-i", env_val["identity_file"],
                            "-p", env_val["gerrit_ssh_port"], env_val["drone_ci_name"] +
                            "@" + env_val["gerrit_host"],
@@ -56,6 +57,7 @@ def gerrit_get_latest_comment(change_id):
 
 def gerrit_set_verify_label(change_num, patch_num, value, message):
     with subprocess.Popen(["ssh",
+                           "-o", '""' + 'StrictHostKeyChecking no' + '""',
                            "-i", env_val["identity_file"],
                            "-p", env_val["gerrit_ssh_port"], env_val["drone_ci_name"] +
                            "@" + env_val["gerrit_host"],
@@ -170,6 +172,7 @@ if __name__ == '__main__':
     webhooks.start()
 
     with subprocess.Popen(["ssh",
+                           "-o", '""' + 'StrictHostKeyChecking no' + '""',
                            "-i", env_val["identity_file"],
                            "-p", env_val["gerrit_ssh_port"], env_val["drone_ci_name"] +
                            "@" + env_val["gerrit_host"],
