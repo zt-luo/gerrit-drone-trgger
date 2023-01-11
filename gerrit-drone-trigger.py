@@ -171,19 +171,20 @@ if __name__ == '__main__':
         handlers={"POST": process_post_request})
     webhooks.start()
 
-    proc = subprocess.Popen(["ssh",
-                             "-o", '""' + 'StrictHostKeyChecking no' + '""',
-                             "-i", env_val["identity_file"],
-                             "-p", env_val["gerrit_ssh_port"], env_val["drone_ci_name"] +
-                             "@" + env_val["gerrit_host"],
-                             "gerrit", "stream-events",
-                             "-s", "comment-added",
-                             ],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
+    try:
 
-    while True:
-        try:
+        proc = subprocess.Popen(["ssh",
+                                 "-o", '""' + 'StrictHostKeyChecking no' + '""',
+                                 "-i", env_val["identity_file"],
+                                 "-p", env_val["gerrit_ssh_port"], env_val["drone_ci_name"] +
+                                 "@" + env_val["gerrit_host"],
+                                 "gerrit", "stream-events",
+                                 "-s", "comment-added",
+                                 ],
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+
+        while True:
             line = proc.stdout.readline()
             data = json.loads(line)
             project = data["project"]
@@ -239,7 +240,7 @@ if __name__ == '__main__':
             else:
                 pass
 
-        except BaseException as err:
-            proc.terminate()
-            webhooks.stop()
-            raise err
+    except BaseException as err:
+        proc.terminate()
+        webhooks.stop()
+        raise err
