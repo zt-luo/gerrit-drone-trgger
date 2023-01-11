@@ -171,75 +171,75 @@ if __name__ == '__main__':
         handlers={"POST": process_post_request})
     webhooks.start()
 
-    with subprocess.Popen(["ssh",
-                           "-o", '""' + 'StrictHostKeyChecking no' + '""',
-                           "-i", env_val["identity_file"],
-                           "-p", env_val["gerrit_ssh_port"], env_val["drone_ci_name"] +
-                           "@" + env_val["gerrit_host"],
-                           "gerrit", "stream-events",
-                           "-s", "comment-added",
-                           ],
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE) as proc:
+    proc = subprocess.Popen(["ssh",
+                             "-o", '""' + 'StrictHostKeyChecking no' + '""',
+                             "-i", env_val["identity_file"],
+                             "-p", env_val["gerrit_ssh_port"], env_val["drone_ci_name"] +
+                             "@" + env_val["gerrit_host"],
+                             "gerrit", "stream-events",
+                             "-s", "comment-added",
+                             ],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
 
-        while True:
-            try:
-                line = proc.stdout.readline()
-                data = json.loads(line)
-                project = data["project"]
-                event_type = data["type"]
-                change_id = data["change"]["id"]
-                change_num = data["change"]["number"]
-                change_branch = data["change"]["branch"]
-                patch_num = data["patchSet"]["number"]
-                patch_ref = data["patchSet"]["ref"]
+    while True:
+        try:
+            line = proc.stdout.readline()
+            data = json.loads(line)
+            project = data["project"]
+            event_type = data["type"]
+            change_id = data["change"]["id"]
+            change_num = data["change"]["number"]
+            change_branch = data["change"]["branch"]
+            patch_num = data["patchSet"]["number"]
+            patch_ref = data["patchSet"]["ref"]
 
-                print("Gerrit event,",
-                      "project:", project,
-                      "type:", event_type,
-                      "change_id:", change_id
-                      )
+            print("Gerrit event,",
+                  "project:", project,
+                  "type:", event_type,
+                  "change_id:", change_id
+                  )
 
+            # print(json.dumps(data, indent=2))
+
+            if event_type == "comment-added":
                 # print(json.dumps(data, indent=2))
+                author_name = data["author"]["name"]
+                if author_name != env_val["drone_ci_name"]:
 
-                if event_type == "comment-added":
-                    # print(json.dumps(data, indent=2))
-                    author_name = data["author"]["name"]
-                    if author_name != env_val["drone_ci_name"]:
+                    comment, verify = gerrit_get_latest_comment(change_id)
+                    if comment != env_val["comment_verify_key"] or \
+                            verify == "1":
+                        continue
 
-                        comment, verify = gerrit_get_latest_comment(change_id)
-                        if comment != env_val["comment_verify_key"] or \
-                                verify == "1":
-                            continue
+                    build_arg = [
+                        {"key": "gerrit_host",
+                            "value": env_val["gerrit_host"]},
+                        {"key": "fetch_project", "value": project},
+                        {"key": "fetch_ref", "value": patch_ref}]
 
-                        build_arg = [
-                            {"key": "gerrit_host",
-                                "value": env_val["gerrit_host"]},
-                            {"key": "fetch_project", "value": project},
-                            {"key": "fetch_ref", "value": patch_ref}]
+                    patch_build_num = drone_create_build(
+                        project, change_branch, build_arg)
 
-                        patch_build_num = drone_create_build(
-                            project, change_branch, build_arg)
+                    ci_url = env_val["drone_ci_url"] + env_val["gerrit_namespace"] + \
+                        "/" + project + "/" + str(patch_build_num)
 
-                        ci_url = env_val["drone_ci_url"] + env_val["gerrit_namespace"] + \
-                            "/" + project + "/" + str(patch_build_num)
+                    patch_build_key = project + str(patch_build_num)
+                    pending_patch_builds[patch_build_key] = {
+                        "change_num": change_num, "patch_num": patch_num,
+                        "ci_url": ci_url,
+                    }
 
-                        patch_build_key = project + str(patch_build_num)
-                        pending_patch_builds[patch_build_key] = {
-                            "change_num": change_num, "patch_num": patch_num,
-                            "ci_url": ci_url,
-                        }
+                    gerrit_set_verify_label(change_num, patch_num,
+                                            "-1", "Start Drone CI Verify: " + ci_url)
 
-                        gerrit_set_verify_label(change_num, patch_num,
-                                                "-1", "Start Drone CI Verify: " + ci_url)
-
-                        print("Start CI verify...")
-                    else:
-                        pass
+                    print("Start CI verify...")
                 else:
                     pass
+            else:
+                pass
 
-            except BaseException as err:
-                proc.terminate()
-                webhooks.stop()
-                raise err
+        except BaseException as err:
+            proc.terminate()
+            webhooks.stop()
+            raise err
